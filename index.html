@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Whisper Phone — project a whisper</title>
+<title>Whisper Phone — the pitch in your ear</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -30,7 +30,7 @@
     background: #1e1e2e; border: 1px solid #33334a; color: #d9d9e6; border-radius: 999px;
     padding: 7px 13px; font-size: 13px; cursor: pointer;
   }
-  .chip:active { background: #ff2d55; border-color: #ff2d55; color: #fff; }
+  .chip:active, .chip.on { background: #ff2d55; border-color: #ff2d55; color: #fff; }
   input[type="range"] { width: 100%; accent-color: #ff2d55; }
   select {
     width: 100%; background: #0a0a12; color: #fff; border: 1px solid #33334a;
@@ -62,9 +62,51 @@
 </head>
 <body>
   <h1>Whisper <span>Phone</span></h1>
-  <p class="sub">Type words. Your phone projects them as a soft whisper — quiet, breathy, barely there — on a faint high-frequency shimmer most adults can't hear.</p>
+  <p class="sub">The pitch you hear in your ear — a high tone that feels like it's ringing inside your head, not coming from the phone. Plus the spoken whisper, if you want words too.</p>
 
   <div class="card">
+    <h2>Ear Pitch — the tone inside your ear</h2>
+    <p class="note">A pure high pitch, played steady or pulsing. High pitches like this can't be placed by your ears the way normal sounds can, so they feel like they're ringing <b>inside your ear</b> instead of coming out of the phone — even though the phone's speaker is what's making them. With earbuds, the binaural mode plays a slightly different pitch in each ear, and the beat between them is heard <b>inside your head</b> — that one genuinely isn't coming from the phone speaker at all.</p>
+
+    <label><b>How are you listening?</b></label>
+    <div class="chips" id="modeChips">
+      <button class="chip on" data-mode="speaker">Phone speaker</button>
+      <button class="chip" data-mode="binaural">Earbuds — binaural beat</button>
+    </div>
+
+    <label>Pitch — <b class="freq" id="pitchFreqVal">17.5 kHz</b></label>
+    <input type="range" id="pitchFreq" min="14000" max="19500" step="50" value="17500">
+
+    <label>Volume (start low) — <b class="freq" id="pitchVolVal">0.06</b></label>
+    <input type="range" id="pitchVol" min="0.01" max="0.15" step="0.01" value="0.06">
+
+    <label>Pulse — how fast it swells and fades — <b class="freq" id="pulseVal">2.0 / sec</b></label>
+    <input type="range" id="pulse" min="0" max="8" step="0.5" value="2">
+
+    <div id="beatWrap">
+      <label>Beat speed — difference between the two ears — <b class="freq" id="beatVal">10 Hz</b></label>
+      <input type="range" id="beat" min="1" max="40" step="1" value="10">
+      <p class="note">Earbuds only. Your left ear gets the pitch, your right ear gets it a few Hz higher, and your brain hears the beat in the middle of your head.</p>
+    </div>
+
+    <div class="chips">
+      <button class="chip pitch-preset" data-freq="15000">15 kHz</button>
+      <button class="chip pitch-preset" data-freq="16000">16 kHz</button>
+      <button class="chip pitch-preset" data-freq="17000">17 kHz</button>
+      <button class="chip pitch-preset" data-freq="18000">18 kHz</button>
+      <button class="chip pitch-preset" data-freq="19000">19 kHz</button>
+    </div>
+
+    <div class="row">
+      <button class="big" id="playPitch">Play the pitch</button>
+      <button class="big stop" id="stopPitch">Stop</button>
+    </div>
+    <div class="status" id="pitchStatus">Tap Play the pitch — sound needs a tap to start. Stops on its own after 90 seconds.</div>
+    <p class="note">Keep the volume low. If your ears feel full, or the ringing stays after you stop, turn it down and take a break. This is for your own ears, on your own phone.</p>
+  </div>
+
+  <div class="card">
+    <h2>Spoken whisper</h2>
     <label for="words"><b>What should it whisper?</b></label>
     <textarea id="words">can you hear me</textarea>
     <div class="chips">
@@ -114,9 +156,10 @@
   <div class="card">
     <h2>How it works</h2>
     <p class="note">
+      <b>The ear pitch:</b> a pure high tone (14–19.5 kHz), steady or pulsing. Your ears locate normal sounds by the tiny time and loudness differences between your two ears — at these pitches those differences nearly vanish, so the tone feels like it's ringing inside your ear rather than sitting in the phone. That's the strange in-your-ear feeling.<br><br>
+      <b>The binaural beat (earbuds):</b> each ear gets its own pitch, a few Hz apart. No beat exists in the air — your brain builds it, and you hear it in the middle of your head. On the phone speaker this doesn't work, because both ears hear both tones mixed together.<br><br>
       <b>The whisper:</b> your phone's own voice reads your words quietly, a little higher and slower than normal, with a soft breath sound mixed underneath — like someone whispering right next to you.<br><br>
-      <b>The shimmer:</b> a very high tone (12–19 kHz) plays along with the words. Most adults can't hear that high, so to them the whisper seems to come out of nowhere. Younger people will hear a faint ring.<br><br>
-      <b>Honest limit:</b> a phone speaker can't make a true silent ultrasound beam — that needs special hardware. This is the closest a phone gets: a soft whisper plus a high tone riding along with it. Turn your volume up if you can't hear the words; the shimmer is the part that stays nearly silent.
+      <b>Honest limit:</b> a phone speaker can't make a true silent ultrasound beam — that needs special hardware. This is the closest a phone gets: a pure high pitch that feels like it's in your ear, and a beat your brain makes itself.
     </p>
   </div>
 
@@ -144,9 +187,135 @@
   bindVal(rateEl, document.getElementById('rateVal'), function (v) { return v.toFixed(2); });
   bindVal(shimFreqEl, document.getElementById('shimVal'), function (v) { return Math.round(v) + ' Hz'; });
 
-  document.querySelectorAll('.chip').forEach(function (c) {
+  document.querySelectorAll('.chip[data-phrase]').forEach(function (c) {
     c.addEventListener('click', function () { wordsEl.value = c.getAttribute('data-phrase'); });
   });
+
+  // ---- shared audio context ----
+  var audioCtx = null;
+  function ensureCtx() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  // ---- ear pitch engine ----
+  var pitchFreqEl = document.getElementById('pitchFreq');
+  var pitchVolEl = document.getElementById('pitchVol');
+  var pulseEl = document.getElementById('pulse');
+  var beatEl = document.getElementById('beat');
+  var beatWrap = document.getElementById('beatWrap');
+  var playPitchBtn = document.getElementById('playPitch');
+  var stopPitchBtn = document.getElementById('stopPitch');
+  var pitchStatusEl = document.getElementById('pitchStatus');
+  var pitchMode = 'speaker';
+  var pitchNodes = null, pitchTimer = null;
+
+  bindVal(pitchFreqEl, document.getElementById('pitchFreqVal'), function (v) { return (v / 1000).toFixed(1) + ' kHz'; });
+  bindVal(pitchVolEl, document.getElementById('pitchVolVal'), function (v) { return v.toFixed(2); });
+  bindVal(pulseEl, document.getElementById('pulseVal'), function (v) { return v === 0 ? 'Steady' : v.toFixed(1) + ' / sec'; });
+  bindVal(beatEl, document.getElementById('beatVal'), function (v) { return Math.round(v) + ' Hz'; });
+
+  document.querySelectorAll('#modeChips .chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      pitchMode = c.getAttribute('data-mode');
+      document.querySelectorAll('#modeChips .chip').forEach(function (x) { x.classList.toggle('on', x === c); });
+      beatWrap.style.display = pitchMode === 'binaural' ? '' : 'none';
+      if (pitchNodes) { pitchStop(); pitchStart(); }
+    });
+  });
+  beatWrap.style.display = 'none';
+
+  document.querySelectorAll('.pitch-preset').forEach(function (c) {
+    c.addEventListener('click', function () {
+      pitchFreqEl.value = c.getAttribute('data-freq');
+      pitchFreqEl.dispatchEvent(new Event('input'));
+      if (pitchNodes) { pitchStop(); pitchStart(); }
+    });
+  });
+  pitchFreqEl.addEventListener('input', function () {
+    if (pitchNodes) {
+      var f = parseFloat(pitchFreqEl.value);
+      pitchNodes.oscL.frequency.value = f;
+      pitchNodes.oscR.frequency.value = pitchMode === 'binaural' ? f + parseFloat(beatEl.value) : f;
+    }
+  });
+  beatEl.addEventListener('input', function () {
+    if (pitchNodes && pitchMode === 'binaural') {
+      pitchNodes.oscR.frequency.value = parseFloat(pitchFreqEl.value) + parseFloat(beatEl.value);
+    }
+  });
+  pitchVolEl.addEventListener('input', function () {
+    if (pitchNodes) {
+      var v = parseFloat(pitchVolEl.value), t = audioCtx.currentTime;
+      pitchNodes.gainL.gain.setValueAtTime(v, t);
+      pitchNodes.gainR.gain.setValueAtTime(v, t);
+    }
+  });
+  pulseEl.addEventListener('input', function () { if (pitchNodes) { pitchStop(); pitchStart(); } });
+
+  function pitchStart() {
+    ensureCtx();
+    pitchStop(true);
+    var freq = parseFloat(pitchFreqEl.value);
+    var vol = parseFloat(pitchVolEl.value);
+    var pulse = parseFloat(pulseEl.value);
+    var merger = audioCtx.createChannelMerger(2);
+    merger.connect(audioCtx.destination);
+    var oscL = audioCtx.createOscillator(); oscL.type = 'sine'; oscL.frequency.value = freq;
+    var oscR = audioCtx.createOscillator(); oscR.type = 'sine';
+    oscR.frequency.value = pitchMode === 'binaural' ? freq + parseFloat(beatEl.value) : freq;
+    var gainL = audioCtx.createGain(); gainL.gain.value = 0;
+    var gainR = audioCtx.createGain(); gainR.gain.value = 0;
+    oscL.connect(gainL); gainL.connect(merger, 0, 0);
+    oscR.connect(gainR); gainR.connect(merger, 0, 1);
+    var lfo = null, lfoGain = null;
+    if (pulse > 0) {
+      lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = pulse;
+      lfoGain = audioCtx.createGain(); lfoGain.gain.value = vol * 0.85;
+      lfo.connect(lfoGain); lfoGain.connect(gainL.gain); lfoGain.connect(gainR.gain);
+    }
+    oscL.start(); oscR.start(); if (lfo) lfo.start();
+    var t = audioCtx.currentTime;
+    gainL.gain.linearRampToValueAtTime(vol, t + 0.4);
+    gainR.gain.linearRampToValueAtTime(vol, t + 0.4);
+    pitchNodes = { oscL: oscL, oscR: oscR, gainL: gainL, gainR: gainR, lfo: lfo, merger: merger };
+    playPitchBtn.disabled = true;
+    pitchStatusEl.textContent = pitchMode === 'binaural'
+      ? 'Playing ' + (freq / 1000).toFixed(1) + ' kHz left / ' + ((freq + parseFloat(beatEl.value)) / 1000).toFixed(1) + ' kHz right — the ' + Math.round(parseFloat(beatEl.value)) + ' Hz beat is in the middle of your head.'
+      : 'Playing a ' + (freq / 1000).toFixed(1) + ' kHz pitch' + (pulse > 0 ? ', pulsing ' + pulse.toFixed(1) + ' times a second' : ', steady') + '.';
+    pitchStatusEl.classList.add('speaking');
+    pitchTimer = setTimeout(function () { pitchStop(); pitchStatusEl.textContent = 'Stopped on its own after 90 seconds.'; }, 90000);
+  }
+  function pitchStop(silent) {
+    if (pitchTimer) { clearTimeout(pitchTimer); pitchTimer = null; }
+    if (!pitchNodes) return;
+    try {
+      var t = audioCtx.currentTime;
+      pitchNodes.gainL.gain.cancelScheduledValues(t);
+      pitchNodes.gainR.gain.cancelScheduledValues(t);
+      pitchNodes.gainL.gain.setValueAtTime(pitchNodes.gainL.gain.value, t);
+      pitchNodes.gainR.gain.setValueAtTime(pitchNodes.gainR.gain.value, t);
+      pitchNodes.gainL.gain.linearRampToValueAtTime(0, t + 0.2);
+      pitchNodes.gainR.gain.linearRampToValueAtTime(0, t + 0.2);
+      var nodes = pitchNodes;
+      setTimeout(function () {
+        try { nodes.oscL.stop(); nodes.oscR.stop(); if (nodes.lfo) nodes.lfo.stop(); } catch (e) {}
+        nodes.merger.disconnect();
+      }, 300);
+    } catch (e) {}
+    pitchNodes = null;
+    playPitchBtn.disabled = false;
+    if (!silent) {
+      pitchStatusEl.textContent = 'Stopped.';
+      pitchStatusEl.classList.remove('speaking');
+    }
+  }
+  playPitchBtn.addEventListener('click', pitchStart);
+  stopPitchBtn.addEventListener('click', function () { pitchStop(); });
 
   // ---- voices ----
   var voices = [];
@@ -171,12 +340,10 @@
   }
 
   // ---- audio: breath noise + shimmer tone ----
-  var audioCtx = null, breathGain = null, shimmerOsc = null, shimmerGain = null;
-  function ensureCtx() {
-    if (!audioCtx) {
-      var AC = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AC();
-      // breath: looped white noise through a bandpass, quiet by default
+  var breathGain = null, shimmerOsc = null, shimmerGain = null;
+  function ensureBreath() {
+    ensureCtx();
+    if (!breathGain) {
       var len = audioCtx.sampleRate * 2;
       var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
       var d = buf.getChannelData(0);
@@ -189,7 +356,6 @@
       src.connect(bp); bp.connect(breathGain); breathGain.connect(audioCtx.destination);
       src.start();
     }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
   }
   function breath(on) {
     if (!breathGain) return;
@@ -226,7 +392,7 @@
   function speakOnce() {
     var text = wordsEl.value.trim();
     if (!text) { statusEl.textContent = 'Type some words first.'; return; }
-    ensureCtx();
+    ensureBreath();
     stopped = false; speaking = true;
     speakBtn.disabled = true;
     statusEl.textContent = 'Whispering: "' + text + '"';
