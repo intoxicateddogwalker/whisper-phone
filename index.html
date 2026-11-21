@@ -102,6 +102,13 @@
       <button class="big stop" id="stopPitch">Stop</button>
     </div>
     <div class="status" id="pitchStatus">Tap Play the pitch — sound needs a tap to start. Stops on its own after 90 seconds.</div>
+
+    <label for="pitchWords"><b>Make it sound like a voice</b> — type words, and the pitch speaks in their rhythm</label>
+    <textarea id="pitchWords" style="min-height:44px">can you hear me</textarea>
+    <div class="row">
+      <button class="big" id="speakPitch">Speak it in the pitch</button>
+    </div>
+    <p class="note">At this pitch you won't hear actual words — ears can't pick out speech that high. What you hear is the shape and rhythm of the words, like a voice murmuring inside your ear.</p>
     <p class="note">Keep the volume low. If your ears feel full, or the ringing stays after you stop, turn it down and take a break. This is for your own ears, on your own phone.</p>
   </div>
 
@@ -260,6 +267,7 @@
   function pitchStart() {
     ensureCtx();
     pitchStop(true);
+    voiceStop(true);
     var freq = parseFloat(pitchFreqEl.value);
     var vol = parseFloat(pitchVolEl.value);
     var pulse = parseFloat(pulseEl.value);
@@ -315,7 +323,69 @@
     }
   }
   playPitchBtn.addEventListener('click', pitchStart);
-  stopPitchBtn.addEventListener('click', function () { pitchStop(); });
+  stopPitchBtn.addEventListener('click', function () { pitchStop(); voiceStop(); });
+
+  // ---- voice in the pitch: tone gated by the rhythm of typed words ----
+  var voiceNodes = null, voiceTimer = null;
+  function voiceStop(silent) {
+    if (voiceTimer) { clearTimeout(voiceTimer); voiceTimer = null; }
+    if (!voiceNodes) return;
+    try { voiceNodes.oscL.stop(); voiceNodes.oscR.stop(); voiceNodes.vib.stop(); } catch (e) {}
+    try { voiceNodes.merger.disconnect(); } catch (e) {}
+    voiceNodes = null;
+    if (!silent) {
+      pitchStatusEl.textContent = 'Stopped.';
+      pitchStatusEl.classList.remove('speaking');
+    }
+  }
+  function speakInPitch() {
+    var textEl = document.getElementById('pitchWords');
+    var text = textEl.value.trim();
+    if (!text) { pitchStatusEl.textContent = 'Type some words first.'; return; }
+    ensureCtx();
+    pitchStop(true);
+    voiceStop(true);
+    var words = text.split(/\s+/).filter(Boolean);
+    var freq = parseFloat(pitchFreqEl.value);
+    var vol = parseFloat(pitchVolEl.value);
+    var merger = audioCtx.createChannelMerger(2);
+    merger.connect(audioCtx.destination);
+    var oscL = audioCtx.createOscillator(); oscL.type = 'sine'; oscL.frequency.value = freq;
+    var oscR = audioCtx.createOscillator(); oscR.type = 'sine';
+    oscR.frequency.value = pitchMode === 'binaural' ? freq + parseFloat(beatEl.value) : freq;
+    var gainL = audioCtx.createGain(); gainL.gain.value = 0;
+    var gainR = audioCtx.createGain(); gainR.gain.value = 0;
+    oscL.connect(gainL); gainL.connect(merger, 0, 0);
+    oscR.connect(gainR); gainR.connect(merger, 0, 1);
+    var vib = audioCtx.createOscillator(); vib.type = 'sine'; vib.frequency.value = 5;
+    var vibGain = audioCtx.createGain(); vibGain.gain.value = 70;
+    vib.connect(vibGain); vibGain.connect(oscL.frequency); vibGain.connect(oscR.frequency);
+    oscL.start(); oscR.start(); vib.start();
+    var t = audioCtx.currentTime + 0.1;
+    words.forEach(function (w) {
+      var dur = Math.min(0.6, 0.14 + w.length * 0.045);
+      gainL.gain.setValueAtTime(0.0001, t);
+      gainR.gain.setValueAtTime(0.0001, t);
+      gainL.gain.linearRampToValueAtTime(vol, t + 0.03);
+      gainR.gain.linearRampToValueAtTime(vol, t + 0.03);
+      gainL.gain.setValueAtTime(vol, t + dur - 0.03);
+      gainR.gain.setValueAtTime(vol, t + dur - 0.03);
+      gainL.gain.linearRampToValueAtTime(0.0001, t + dur);
+      gainR.gain.linearRampToValueAtTime(0.0001, t + dur);
+      t += dur + 0.12;
+    });
+    var endAt = t + 0.2;
+    try { oscL.stop(endAt); oscR.stop(endAt); vib.stop(endAt); } catch (e) {}
+    voiceNodes = { oscL: oscL, oscR: oscR, vib: vib, merger: merger };
+    voiceTimer = setTimeout(function () {
+      voiceStop(true);
+      pitchStatusEl.textContent = 'Done — that was the rhythm of your words, in the pitch.';
+      pitchStatusEl.classList.remove('speaking');
+    }, (endAt - audioCtx.currentTime) * 1000 + 100);
+    pitchStatusEl.textContent = 'Speaking "' + text + '" in the pitch — listen for the rhythm of the words.';
+    pitchStatusEl.classList.add('speaking');
+  }
+  document.getElementById('speakPitch').addEventListener('click', speakInPitch);
 
   // ---- voices ----
   var voices = [];
