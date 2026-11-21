@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Whisper Phone — project a whisper</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #0a0a12; color: #f2f2f7;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 24px 16px 48px;
+  }
+  h1 { font-size: 30px; margin: 8px 0 2px; letter-spacing: 0.5px; }
+  h1 span { color: #ff2d55; }
+  .sub { color: #9a9aad; font-size: 14px; margin: 0 0 20px; text-align: center; max-width: 520px; }
+  .card {
+    width: 100%; max-width: 560px; background: #14141f; border: 1px solid #262637;
+    border-radius: 18px; padding: 20px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; color: #b9b9c9; margin: 14px 0 6px; }
+  label b { color: #f2f2f7; font-weight: 600; }
+  textarea {
+    width: 100%; min-height: 74px; resize: vertical; background: #0a0a12; color: #fff;
+    border: 1px solid #33334a; border-radius: 12px; padding: 12px; font-size: 17px; font-family: inherit;
+  }
+  textarea:focus { outline: 2px solid #ff2d55; border-color: #ff2d55; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    background: #1e1e2e; border: 1px solid #33334a; color: #d9d9e6; border-radius: 999px;
+    padding: 7px 13px; font-size: 13px; cursor: pointer;
+  }
+  .chip:active { background: #ff2d55; border-color: #ff2d55; color: #fff; }
+  input[type="range"] { width: 100%; accent-color: #ff2d55; }
+  select {
+    width: 100%; background: #0a0a12; color: #fff; border: 1px solid #33334a;
+    border-radius: 10px; padding: 10px; font-size: 15px;
+  }
+  .row { display: flex; gap: 10px; margin-top: 18px; }
+  .big {
+    flex: 1; border: none; border-radius: 999px; padding: 16px; font-size: 18px; font-weight: 700;
+    background: #ff2d55; color: #fff; cursor: pointer;
+  }
+  .big:active { transform: scale(0.97); }
+  .big.stop { background: #2a2a3a; color: #fff; flex: 0 0 96px; }
+  .big:disabled { opacity: 0.45; }
+  .toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; color: #d9d9e6; }
+  .toggle input { width: 18px; height: 18px; accent-color: #ff2d55; }
+  .status { margin-top: 12px; font-size: 13px; color: #9a9aad; min-height: 18px; text-align: center; }
+  .status.speaking { color: #ff8fa3; }
+  .tones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tone {
+    flex: 1 1 30%; background: #1e1e2e; border: 1px solid #33334a; color: #fff;
+    border-radius: 12px; padding: 12px 6px; font-size: 15px; cursor: pointer;
+  }
+  .tone:active { background: #ff2d55; border-color: #ff2d55; }
+  .note { font-size: 13px; color: #9a9aad; line-height: 1.55; }
+  .note b { color: #d9d9e6; }
+  h2 { font-size: 17px; margin: 0 0 4px; }
+  .freq { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <h1>Whisper <span>Phone</span></h1>
+  <p class="sub">Type words. Your phone projects them as a soft whisper — quiet, breathy, barely there — on a faint high-frequency shimmer most adults can't hear.</p>
+
+  <div class="card">
+    <label for="words"><b>What should it whisper?</b></label>
+    <textarea id="words">can you hear me</textarea>
+    <div class="chips">
+      <button class="chip" data-phrase="can you hear me">can you hear me</button>
+      <button class="chip" data-phrase="come closer">come closer</button>
+      <button class="chip" data-phrase="this is a whisper">this is a whisper</button>
+      <button class="chip" data-phrase="psst... over here">psst... over here</button>
+    </div>
+
+    <label for="voice"><b>Voice</b></label>
+    <select id="voice"></select>
+
+    <label>Whisper volume — <b class="freq" id="volVal">0.25</b></label>
+    <input type="range" id="vol" min="0.05" max="0.6" step="0.01" value="0.25">
+
+    <label>Pitch (higher = whisperier) — <b class="freq" id="pitchVal">1.3</b></label>
+    <input type="range" id="pitch" min="0.5" max="2" step="0.05" value="1.3">
+
+    <label>Speed — <b class="freq" id="rateVal">0.85</b></label>
+    <input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.85">
+
+    <label class="toggle"><input type="checkbox" id="loop"> Repeat the whisper on a loop</label>
+    <label class="toggle"><input type="checkbox" id="shimmerOn" checked> High-frequency shimmer (the carrier tone)</label>
+    <label>Shimmer frequency — <b class="freq" id="shimVal">18000 Hz</b></label>
+    <input type="range" id="shimFreq" min="12000" max="19000" step="100" value="18000">
+
+    <div class="row">
+      <button class="big" id="speak">Whisper it</button>
+      <button class="big stop" id="stop">Stop</button>
+    </div>
+    <div class="status" id="status">Ready. Tap Whisper it — sound needs a tap to start.</div>
+  </div>
+
+  <div class="card">
+    <h2>Can you hear it? — frequency test</h2>
+    <p class="note">Tap a frequency. It plays a short tone. Most adults stop hearing somewhere around 16–18 kHz — younger ears hear higher.</p>
+    <div class="tones">
+      <button class="tone" data-freq="12000">12 kHz</button>
+      <button class="tone" data-freq="14000">14 kHz</button>
+      <button class="tone" data-freq="16000">16 kHz</button>
+      <button class="tone" data-freq="18000">18 kHz</button>
+      <button class="tone" data-freq="19000">19 kHz</button>
+    </div>
+    <p class="status" id="toneStatus"></p>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <p class="note">
+      <b>The whisper:</b> your phone's own voice reads your words quietly, a little higher and slower than normal, with a soft breath sound mixed underneath — like someone whispering right next to you.<br><br>
+      <b>The shimmer:</b> a very high tone (12–19 kHz) plays along with the words. Most adults can't hear that high, so to them the whisper seems to come out of nowhere. Younger people will hear a faint ring.<br><br>
+      <b>Honest limit:</b> a phone speaker can't make a true silent ultrasound beam — that needs special hardware. This is the closest a phone gets: a soft whisper plus a high tone riding along with it. Turn your volume up if you can't hear the words; the shimmer is the part that stays nearly silent.
+    </p>
+  </div>
+
+<script>
+(function () {
+  var wordsEl = document.getElementById('words');
+  var voiceEl = document.getElementById('voice');
+  var volEl = document.getElementById('vol');
+  var pitchEl = document.getElementById('pitch');
+  var rateEl = document.getElementById('rate');
+  var loopEl = document.getElementById('loop');
+  var shimmerOnEl = document.getElementById('shimmerOn');
+  var shimFreqEl = document.getElementById('shimFreq');
+  var speakBtn = document.getElementById('speak');
+  var stopBtn = document.getElementById('stop');
+  var statusEl = document.getElementById('status');
+  var toneStatusEl = document.getElementById('toneStatus');
+
+  function bindVal(input, out, fmt) {
+    var show = function () { out.textContent = fmt(parseFloat(input.value)); };
+    input.addEventListener('input', show); show();
+  }
+  bindVal(volEl, document.getElementById('volVal'), function (v) { return v.toFixed(2); });
+  bindVal(pitchEl, document.getElementById('pitchVal'), function (v) { return v.toFixed(2); });
+  bindVal(rateEl, document.getElementById('rateVal'), function (v) { return v.toFixed(2); });
+  bindVal(shimFreqEl, document.getElementById('shimVal'), function (v) { return Math.round(v) + ' Hz'; });
+
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.addEventListener('click', function () { wordsEl.value = c.getAttribute('data-phrase'); });
+  });
+
+  // ---- voices ----
+  var voices = [];
+  function loadVoices() {
+    voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    voiceEl.innerHTML = '';
+    if (!voices.length) {
+      var o = document.createElement('option');
+      o.textContent = 'Default voice'; voiceEl.appendChild(o); return;
+    }
+    voices.forEach(function (v, i) {
+      var o = document.createElement('option');
+      o.value = i; o.textContent = v.name + ' (' + v.lang + ')';
+      voiceEl.appendChild(o);
+    });
+    var pref = voices.findIndex(function (v) { return /en[-_]US/i.test(v.lang); });
+    if (pref >= 0) voiceEl.value = String(pref);
+  }
+  if (window.speechSynthesis) {
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  // ---- audio: breath noise + shimmer tone ----
+  var audioCtx = null, breathGain = null, shimmerOsc = null, shimmerGain = null;
+  function ensureCtx() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      // breath: looped white noise through a bandpass, quiet by default
+      var len = audioCtx.sampleRate * 2;
+      var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = audioCtx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      var bp = audioCtx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 2800; bp.Q.value = 0.7;
+      breathGain = audioCtx.createGain(); breathGain.gain.value = 0;
+      src.connect(bp); bp.connect(breathGain); breathGain.connect(audioCtx.destination);
+      src.start();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function breath(on) {
+    if (!breathGain) return;
+    var t = audioCtx.currentTime;
+    breathGain.gain.cancelScheduledValues(t);
+    breathGain.gain.setValueAtTime(breathGain.gain.value, t);
+    breathGain.gain.linearRampToValueAtTime(on ? 0.05 : 0, t + 0.4);
+  }
+  function shimmer(on) {
+    if (!audioCtx) return;
+    if (on && shimmerOnEl.checked) {
+      if (!shimmerOsc) {
+        shimmerOsc = audioCtx.createOscillator();
+        shimmerOsc.type = 'sine';
+        shimmerGain = audioCtx.createGain(); shimmerGain.gain.value = 0;
+        shimmerOsc.connect(shimmerGain); shimmerGain.connect(audioCtx.destination);
+        shimmerOsc.start();
+      }
+      shimmerOsc.frequency.value = parseFloat(shimFreqEl.value);
+      var t = audioCtx.currentTime;
+      shimmerGain.gain.cancelScheduledValues(t);
+      shimmerGain.gain.setValueAtTime(shimmerGain.gain.value, t);
+      shimmerGain.gain.linearRampToValueAtTime(0.015, t + 0.3);
+    } else if (shimmerGain) {
+      var t2 = audioCtx.currentTime;
+      shimmerGain.gain.cancelScheduledValues(t2);
+      shimmerGain.gain.setValueAtTime(shimmerGain.gain.value, t2);
+      shimmerGain.gain.linearRampToValueAtTime(0, t2 + 0.3);
+    }
+  }
+
+  // ---- whisper ----
+  var stopped = false, speaking = false;
+  function speakOnce() {
+    var text = wordsEl.value.trim();
+    if (!text) { statusEl.textContent = 'Type some words first.'; return; }
+    ensureCtx();
+    stopped = false; speaking = true;
+    speakBtn.disabled = true;
+    statusEl.textContent = 'Whispering: "' + text + '"';
+    statusEl.classList.add('speaking');
+    var u = new SpeechSynthesisUtterance(text);
+    var v = voices[parseInt(voiceEl.value, 10)];
+    if (v) u.voice = v;
+    u.volume = parseFloat(volEl.value);
+    u.pitch = parseFloat(pitchEl.value);
+    u.rate = parseFloat(rateEl.value);
+    u.onstart = function () { breath(true); shimmer(true); };
+    u.onend = function () {
+      breath(false); shimmer(false);
+      if (!stopped && loopEl.checked) {
+        setTimeout(function () { if (!stopped) speakOnce(); }, 700);
+      } else {
+        speaking = false; speakBtn.disabled = false;
+        statusEl.textContent = 'Done. Tap Whisper it to go again.';
+        statusEl.classList.remove('speaking');
+      }
+    };
+    u.onerror = function () {
+      speaking = false; speakBtn.disabled = false;
+      statusEl.textContent = 'That voice could not speak. Try another voice.';
+      statusEl.classList.remove('speaking');
+    };
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+  speakBtn.addEventListener('click', speakOnce);
+  stopBtn.addEventListener('click', function () {
+    stopped = true;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    breath(false); shimmer(false);
+    speaking = false; speakBtn.disabled = false;
+    statusEl.textContent = 'Stopped.';
+    statusEl.classList.remove('speaking');
+  });
+
+  // ---- frequency test tones ----
+  document.querySelectorAll('.tone').forEach(function (b) {
+    b.addEventListener('click', function () {
+      ensureCtx();
+      var freq = parseInt(b.getAttribute('data-freq'), 10);
+      var osc = audioCtx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      var g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.05);
+      g.gain.setValueAtTime(0.08, audioCtx.currentTime + 1.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 2);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 2);
+      toneStatusEl.textContent = 'Playing ' + (freq / 1000) + ' kHz for 2 seconds — can you hear it?';
+    });
+  });
+})();
+</script>
+</body>
+</html>
